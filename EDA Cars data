@@ -1,0 +1,246 @@
+import pandoc
+
+import pandas as pd
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+# Data Preprocessing
+
+df = sns.load_dataset('mpg')
+print(df.shape) # how many data points (rows), and how many attributes (columns)
+df.head()
+
+df.shape
+
+df.isnull().sum()
+
+df.describe()
+
+df.info()
+
+# Separation of Qualitative and Quantitative
+
+d2 = df.select_dtypes(include = ['object'])
+d2.head()
+
+d3 = df.select_dtypes(include = ['float64'])
+print(d3.head())
+d4 = df.select_dtypes(include = ['int64'])
+d4.head()
+
+# Merging 2 dataframes
+
+r = pd.concat([d3,d4],axis=1)
+r.head()
+
+sns.histplot(d3,x='mpg')
+sns.displot(d3,x='mpg',kind='kde')
+
+# Finding the correlation
+
+np.corrcoef(d3)
+
+d3.corr()
+
+$\textbf{Inference}$<br>
+MPG is chosen or considered as the dependent variable. There exists almost strong negative correlation between displacement and horsepower. That is when mpg increases the displacement of the car reduces or when the mpg decrease the displacement increases. The same interpretation can be provided for horsepower.<br>
+However, there exists a moderate positive correlation between mpg and acceleration. The relationship or their degree of association is not very strong in explaining its assoication.
+
+sns.scatterplot(data=d3,x='mpg',y='displacement')
+
+sns.heatmap(d3.corr())
+
+d2['name']
+
+df['displacement'].describe()
+
+# Textbook Dataset
+
+# Question 1 - Data type information
+
+df.info()
+
+From the above table of information we can conclude that 2 predictors - $\textbf{origin}$ and $\textbf{name}$ are qualitative in nature and the remaining 7 variables - $\textbf{mpg, cylinders, displacement, horsepower, weight, acceleration,model year}$ are quantitative in nature either float or int.
+
+r['horsepower'].isnull().sum()
+
+r['horsepower'] = r['horsepower'].fillna(method='ffill')
+print(r['horsepower'].isnull().sum())
+
+# Question 2 - Range of the Quantitative Predictors
+
+max(r['mpg'])-min(r['mpg'])
+
+def range_fun(x):
+    return (max(r[x])-min(r[x]))
+
+range_fun('horsepower')
+
+range_fun('displacement')
+
+# Question 3 - Mean and Standard deviation of quantitative
+
+import statistics
+
+def descriptive_statistics(x):
+    mean_x = statistics.mean(r[x])
+    std_x = statistics.stdev(r[x])
+    return (print("the mean and standard deviation of",x,[mean_x,std_x]))
+
+descriptive_statistics('mpg')
+
+descriptive_statistics('displacement')
+
+descriptive_statistics('horsepower')
+
+d4 = r.drop(r.index[10:85])
+d4.head(20)
+
+d4.shape
+
+def descriptive_statistics1(x):
+    range_x = max(d4[x])-min(d4[x])
+    mean_x = statistics.mean(d4[x])
+    std_x = statistics.stdev(d4[x])
+    return (print("the mean and standard deviation of",x,[range_x,mean_x,std_x]))
+
+descriptive_statistics1('mpg')
+
+descriptive_statistics1('horsepower')
+
+descriptive_statistics1('displacement')
+
+# Question 5 - graphical visualization of all the predictors
+
+# relplot - a relationship plot available in the seaborn library
+sns.relplot(data=df,x='mpg',y='horsepower',hue='origin')
+
+# define a function for graphical visualization
+def graphical_rep(d,x,y,z):
+    return(sns.relplot(data=d,x=x,y=y,hue=z))
+
+graphical_rep(df,'displacement','horsepower','origin')
+
+graphical_rep(df,'acceleration','displacement','origin')
+
+# Question 6 - Pairwise Plotting to check the predictive ability of variables over mpg
+
+sns.pairplot(r)
+
+# Program 2 - Linear Regression
+
+# checking for correlation between mpg and horsepower - statistically and visually
+
+import statistics
+
+np.corrcoef(r['mpg'],r['horsepower'])
+
+def correlation(x,y):
+
+
+    numerator = sum((r[x]-statistics.mean(r[x]))*(r[y]-statistics.mean(r[y])))
+    
+    denominator = (sum(r[x]-statistics.mean(r[x]))**2)**0.5*(sum(r[y]-statistics.mean(r[y]))**2)**0.5
+    
+    return round (numerator/denominator,2)
+
+correlation('mpg','horsepower')
+
+sns.heatmap(np.corrcoef(r['mpg'],r['horsepower']))
+
+# training and testing data - spliting the data - 70% : 30%
+# dependent variable - mpg
+# independent variable - horsepower
+x = r['horsepower']
+print(x.head())
+y = r['mpg']
+y.head()
+
+# splitting the variable - importing the sklearn library
+from sklearn.model_selection import train_test_split
+train_x,test_x,train_y,test_y = train_test_split(x,y,train_size = 0.7,test_size=0.3,random_state=100)
+
+import statsmodels.api as sm
+
+# adding intercept to the X
+train_x_sm = sm.add_constant(train_x)
+
+# fitting a regression line
+lm1 = sm.OLS(train_y,train_x_sm).fit()
+
+lm1.params
+
+lm1.summary()
+
+$\textbf{Inference}$<br>
+The estimated regression model is defined as $\begin{equation}y = 40.1025-0.1599x\end{equation}$<br>
+The average mpg when the horsepower is brought to a rest is 40.1025. And when there is a 1 unit increase in the horsepower the mpg drops to approximately 16%.
+
+def prediction(x):
+    return print("mpg = ",40.102539 - 0.159922*x)
+
+prediction(98)
+
+r['mpg'].describe()
+
+# confidence interval 
+def confidence_interval(B0,B1):
+    sd0 = 1/len(train_x) + statistics.mean(train_x)**2/statistics.variance(train_x)
+    UL_B0 = B0 + 1.96*(sd0)**0.5
+    LL_B0 = B0 - 1.96*(sd0)**0.5
+    print("the CI of intercept is",(LL_B0,UL_B0))
+    sd1 = statistics.variance(r['horsepower'])/statistics.variance(train_x)
+    UL_B1 =  B1 + 1.96*(sd1)**0.5
+    LL_B1 = B1 - 1.96*(sd1)**0.5
+    print("the CI of slope is",(LL_B1,UL_B1))
+
+confidence_interval(40.102539,0.159922)
+
+# plotting the regression
+plt.scatter(train_x,train_y)
+plt.plot(train_x,40.102539 - 0.159922*train_x,'red')
+plt.xlabel("horsepower")
+plt.ylabel("mpg")
+plt.title("fitting of regression line")
+None
+
+$\textbf{Inference}$<br>
+The red line represent the fitted line or the regression line and the blue dots represent the observed value or plot of the response variable and predictor variable. From the graph we can infer that the relationship between horsepower and mpg is negative. Another observation is that there is no presence of significant outliers or leverage points in the dependent or the in the independent variable respectively since the regression line is not pulled away from the observed points
+
+fig = plt.figure(figsize=(14, 8))
+sm.graphics.plot_regress_exog(lm1,'Head_size','points',fig=fig)
+
+from statsmodels.graphics.gofplots import ProbPlot
+
+model_norm_residuals = lm1.get_influence().resid_studentized_internal
+
+QQ = ProbPlot(model_norm_residuals)
+plot_lm_2 = QQ.qqplot(line='45', alpha=0.5, color='#4C72B0', lw=1)
+plot_lm_2.axes[0].set_title('Normal Q-Q')
+plot_lm_2.axes[0].set_xlabel('Theoretical Quantiles')
+plot_lm_2.axes[0].set_ylabel('Standardized Residuals');
+
+$\textbf{Inference}$<br>
+The quartile-quartile plot or the normal probaility plot is used to check if the errors are normally distributed. From the above plot we can infer that the points or standardized residuals lie closer to the regression or the fitted line thus obeying the most important assumption of the Gauss Markov setup.
+
+# Gradient Descent
+
+# Building the model
+m = 0
+c = 0
+
+L = 0.04  # The learning Rate
+epochs = 150  # The number of iterations to perform gradient descent
+
+n = len(train_x) # Number of elements in X
+
+# Performing Gradient Descent 
+for i in range(1,epochs): 
+    Y_pred = m*train_x + c  # The current predicted value of Y
+    D_m = (-1/n) * sum(train_x * (train_y - Y_pred))  # Derivative wrt m
+    D_c = (-1/n) * sum(train_y - Y_pred)  # Derivative wrt c
+    m = m - L * D_m  # Update m
+    c = c - L * D_c  # Update c
+
+print(m,c)
